@@ -57,11 +57,7 @@ void setup() {
 
 void reset() {
   for (int i; i < 3; i++) {
-    pinMode(gameLEDS[i], OUTPUT);
-  }
-  //This loops and sets up the Button pins to be INPUT_PULLUP in an array. Ground is HIGH so signal goes LOW on depress.
-  for (int i; i < 3; i++) {
-    pinMode(gameBTNS[i], INPUT_PULLUP);
+    digitalWrite(gameLEDS[i], LOW);
   }
 }
 
@@ -87,16 +83,6 @@ void normal_game() {
       delay(buzzerDelay);
       digitalWrite(gameLEDS[i], HIGH);
       tone(buzzer, 1300, 50);
-
-      // Auto resets after 5 seconds
-      delay(resetDelay);
-      // needs to be manually reset when game show button is depressed
-      //for (;;);
-      Serial.println(gameLEDS[i]);
-      Serial.println(gameBTNS[i]);
-    }
-    else {
-      digitalWrite(gameLEDS[i], LOW);
     }
   }
 }
