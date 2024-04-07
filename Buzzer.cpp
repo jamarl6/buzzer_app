@@ -1,14 +1,16 @@
 #include <WiFi.h>
-#include <WiFiClient.h>
-#include <WiFiAP.h>
+#include <WebServer.h>
 
-const char* ssid = "GangBuzzer";
-const char* password = "TillistderBoss";
-unsigned long startTime = 0;
+/* Put your SSID & Password */
+const char* ssid = "ESP32";  // Enter SSID here
+const char* password = "12345678";  //Enter Password here
 
-bool running = false;
+/* Put IP Address details */
+IPAddress local_ip(192, 168, 1, 1);
+IPAddress gateway(192, 168, 1, 1);
+IPAddress subnet(255, 255, 255, 0);
 
-WiFiServer server(80);
+WebServer server(80);
 
 //3 LEDS
 int gameLEDS[] = { 14,25,26 };
@@ -20,12 +22,16 @@ int buzzer = 13;
 int buzzerDelay = 100;
 int resetDelay = 12000;
 
+enum Gamemode {
+  NORMAL,
+  START_STOP
+};
+
+enum Gamemode gamemode = NORMAL;
+bool reset_triggered = false;
 
 void setup() {
-
-  //Serial begin allows the serial port to read and monitor functions
   Serial.begin(115200);
-  //This loops and sets up the LED pins to be output in an array
   for (int i; i < 3; i++) {
     pinMode(gameLEDS[i], OUTPUT);
   }
@@ -34,110 +40,127 @@ void setup() {
     pinMode(gameBTNS[i], INPUT_PULLUP);
   }
 
-  if (!WiFi.softAP(ssid, password)) {
-    log_e("Soft AP creation failed.");
-    while (1);
-  }
-  IPAddress myIP = WiFi.softAPIP();
-  Serial.print("AP IP address: ");
-  Serial.println(myIP);
-  server.begin();
 
+  WiFi.softAP(ssid, password);
+  WiFi.softAPConfig(local_ip, gateway, subnet);
+  delay(100);
+
+  server.on("/", handle_OnConnect);
+  server.on("/change_gamemode_normal", handle_change_gamemode_normal);
+  server.on("/change_gamemode_start_stop", handle_change_gamemode_start_stop);
+  server.on("/reset", handle_reset);
+  server.onNotFound(handle_NotFound);
+
+  server.begin();
   Serial.println("Server jestachtet");
 }
 
+void reset() {
+  for (int i; i < 3; i++) {
+    pinMode(gameLEDS[i], OUTPUT);
+  }
+  //This loops and sets up the Button pins to be INPUT_PULLUP in an array. Ground is HIGH so signal goes LOW on depress.
+  for (int i; i < 3; i++) {
+    pinMode(gameBTNS[i], INPUT_PULLUP);
+  }
+}
 
+void normal_game() {
+  for (int i; i < 3; i++) {
+    //Press the button to intiate which button chimes in
+    if (digitalRead(gameBTNS[i]) == LOW) {
 
-void loop() {
+      // This is the indicator light and buzzer sound confirmation
+      digitalWrite(gameLEDS[i], HIGH);
 
-  WiFiClient client = server.available();   // listen for incoming clients
+      //Buzzer and light flicker
+      tone(buzzer, 1300, 50);
+      delay(buzzerDelay);
+      digitalWrite(gameLEDS[i], LOW);
+      tone(buzzer, 1300, 50);
+      delay(buzzerDelay);
+      digitalWrite(gameLEDS[i], HIGH);
+      tone(buzzer, 1300, 50);
+      delay(buzzerDelay);
+      digitalWrite(gameLEDS[i], LOW);
+      tone(buzzer, 1300, 50);
+      delay(buzzerDelay);
+      digitalWrite(gameLEDS[i], HIGH);
+      tone(buzzer, 1300, 50);
 
-  if (client) {                             // if you get a client,
-    Serial.println("New Client.");           // print a message out the serial port
-    String currentLine = "";                // make a String to hold incoming data from the client
-    while (client.connected()) {            // loop while the client's connected
-      if (client.available()) {             // if there's bytes to read from the client,
-        char c = client.read();             // read a byte, then
-        Serial.write(c);                    // print it out the serial monitor
-        if (c == '\n') {                    // if the byte is a newline character
-
-          // if the current line is blank, you got two newline characters in a row.
-          // that's the end of the client HTTP request, so send a response:
-          if (currentLine.length() == 0) {
-
-            //THIS WILL ALWAYS LOOP UNLESS YOU PUT A FOR LOOP STOPPER @ THE END
-            // This loops thru the buzzer buttons to define which is pressed
-
-            for (int i; i < 3; i++) {
-              //Press the button to intiate which button chimes in
-              if (digitalRead(gameBTNS[i]) == LOW) {
-
-                // This is the indicator light and buzzer sound confirmation
-
-                digitalWrite(gameLEDS[i], HIGH);
-
-                //Buzzer and light flicker
-                tone(buzzer, 1300, 50);
-                delay(buzzerDelay);
-                digitalWrite(gameLEDS[i], LOW);
-                tone(buzzer, 1300, 50);
-                delay(buzzerDelay);
-                digitalWrite(gameLEDS[i], HIGH);
-                tone(buzzer, 1300, 50);
-                delay(buzzerDelay);
-                digitalWrite(gameLEDS[i], LOW);
-                tone(buzzer, 1300, 50);
-                delay(buzzerDelay);
-                digitalWrite(gameLEDS[i], HIGH);
-                tone(buzzer, 1300, 50);
-
-                if (!running) {
-                  // Starte die Stoppuhr
-                  startTime = millis();
-                  running = true;
-                  client.println("HTTP/1.1 200 OK");
-                  client.println("Content-Type: text/html");
-                  client.println();
-                  client.println("<p>gameLEDS[i]</p>");
-                  client.println("</body></html>");
-                  client.println();
-                  client.stop();
-                }
-                else {
-                  // Stoppe die Stoppuhr und zeige die Zeit auf dem Webserver an
-                  unsigned long elapsedTime = millis() - startTime;
-                  client.println("HTTP/1.1 200 OK");
-                  client.println("Content-Type: text/html");
-                  client.println();
-                  client.print("<html><body><h1>Elapsed Time: ");
-                  client.print(elapsedTime);
-                  client.println(" milliseconds</h1></body></html>");
-                  // Zusätzliche Informationen hinzufügen
-                  client.println("<p>gameLEDS[i]</p>");
-                  client.println("</body></html>");
-                  client.println();
-                  client.stop();
-                }
-              }
-              else {
-                digitalWrite(gameLEDS[i], LOW);
-              }
-            }
-            // Auto resets after 5 seconds
-            delay(resetDelay);
-            // needs to be manually reset when game show button is depressed
-            //for (;;);
-            Serial.println(gameLEDS[i]);
-            Serial.println(gameBTNS[i]);
-          }
-        }
-        else if (c != '\r') {  // if you got anything else but a carriage return character,
-            currentLine += c;      // add it to the end of the currentLine
-        }
-        else {    // if you got a newline, then clear currentLine:
-            currentLine = "";
-        }
-      }
+      // Auto resets after 5 seconds
+      delay(resetDelay);
+      // needs to be manually reset when game show button is depressed
+      //for (;;);
+      Serial.println(gameLEDS[i]);
+      Serial.println(gameBTNS[i]);
+    }
+    else {
+      digitalWrite(gameLEDS[i], LOW);
     }
   }
+}
+
+void loop() {
+  server.handleClient();
+  if (gamemode == NORMAL) {
+    normal_game();
+  }
+  else if (gamemode == START_STOP) {
+    //not implemented yet
+  }
+
+  if (reset_triggered) {
+    reset();
+  }
+}
+
+void handle_OnConnect() {
+  server.send(200, "text/html", SendHTML());
+}
+
+void handle_change_gamemode_normal() {
+  gamemode = NORMAL;
+}
+
+void handle_change_gamemode_start_stop() {
+  gamemode = START_STOP;
+}
+
+void handle_reset() {
+  reset_triggered = true;
+}
+
+void handle_NotFound(){
+  server.send(404, "text/plain", "Not found");
+}
+
+String SendHTML() {
+  String ptr = "<!DOCTYPE html> <html>\n";
+  ptr += "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n";
+  ptr += "<title>LED Control</title>\n";
+  ptr += "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}\n";
+  ptr += "body{margin-top: 50px;} h1 {color: #444444;margin: 50px auto 30px;} h3 {color: #444444;margin-bottom: 50px;}\n";
+  ptr += ".button {display: block;width: 80px;background-color: #3498db;border: none;color: white;padding: 13px 30px;text-decoration: none;font-size: 25px;margin: 0px auto 35px;cursor: pointer;border-radius: 4px;}\n";
+  ptr += ".button-on {background-color: #3498db;}\n";
+  ptr += ".button-on:active {background-color: #2980b9;}\n";
+  ptr += ".button-off {background-color: #34495e;}\n";
+  ptr += ".button-off:active {background-color: #2c3e50;}\n";
+  ptr += "p {font-size: 14px;color: #888;margin-bottom: 10px;}\n";
+  ptr += "</style>\n";
+  ptr += "</head>\n";
+  ptr += "<body>\n";
+  ptr += "<h1>ESP32 Web Server</h1>\n";
+  ptr += "<h3>Using Access Point(AP) Mode</h3>\n";
+
+  switch(gamemode) {
+    case NORMAL: ptr += "<p>Gamemode</p><a class=\"button button-change_gamemode_start_stop\" href=\"/change_gamemode_start_stop\">Start/Stop</a>\n"; break;
+    case START_STOP: ptr += "<p>Gamemode</p><a class=\"button button-change_gamemode_normal\" href=\"/change_gamemode_Normal\">normal</a>\n"; break;
+  }
+
+  ptr += "<a class=\"button button-reset\" href=\"/change_gamemode_reset\">Reset</a>\n";
+
+  ptr += "</body>\n";
+  ptr += "</html>\n";
+  return ptr;
 }
