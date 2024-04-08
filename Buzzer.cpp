@@ -92,6 +92,7 @@ void normal_game() {
         //for (;;);
         Serial.println(gameLEDS[i]);
         Serial.println(gameBTNS[i]);
+        reset();
       }
     }
   }
