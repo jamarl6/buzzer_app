@@ -20,7 +20,7 @@ int gameBTNS[] = { 15,5,4 };
 int buzzer = 13;
 //ALL DELAYS
 int buzzerDelay = 100;
-int resetDelay = 12000;
+int resetDelay = 2000;
 
 enum Gamemode {
   NORMAL,
@@ -57,13 +57,13 @@ void setup() {
 }
 
 void reset() {
-  for (int i; i < 3; i++) {
+  for (int i = 0; i < 3; i++) {
     digitalWrite(gameLEDS[i], LOW);
   }
 }
 
 void normal_game() {
-  for (int i; i < 3; i++) {
+  for (int i = 0; i < 3; i++) {
     //Press the button to intiate which button chimes in
     if (digitalRead(gameBTNS[i]) == LOW) {
 
@@ -86,6 +86,7 @@ void normal_game() {
       tone(buzzer, 1300, 50);
 
       if (!clientConnected) {
+        Serial.println("Reset!!");
         // Auto resets after 5 seconds
         delay(resetDelay); 
         // needs to be manually reset when game show button is depressed
