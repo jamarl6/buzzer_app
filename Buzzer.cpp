@@ -28,7 +28,8 @@ enum Gamemode {
 };
 
 enum Gamemode gamemode = NORMAL;
-bool reset_triggered = false;
+bool resetTriggered = false;
+bool clientConnected = false;
 
 void setup() {
   Serial.begin(115200);
@@ -83,6 +84,15 @@ void normal_game() {
       delay(buzzerDelay);
       digitalWrite(gameLEDS[i], HIGH);
       tone(buzzer, 1300, 50);
+
+      if (!clientConnected) {
+        // Auto resets after 5 seconds
+        delay(resetDelay); 
+        // needs to be manually reset when game show button is depressed
+        //for (;;);
+        Serial.println(gameLEDS[i]);
+        Serial.println(gameBTNS[i]);
+      }
     }
   }
 }
@@ -96,12 +106,13 @@ void loop() {
     //not implemented yet
   }
 
-  if (reset_triggered) {
+  if (resetTriggered) {
     reset();
   }
 }
 
 void handle_OnConnect() {
+  clientConnected = true;
   server.send(200, "text/html", SendHTML());
 }
 
@@ -114,7 +125,7 @@ void handle_change_gamemode_start_stop() {
 }
 
 void handle_reset() {
-  reset_triggered = true;
+  resetTriggered = true;
 }
 
 void handle_NotFound(){
