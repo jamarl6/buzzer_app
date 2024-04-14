@@ -28,6 +28,13 @@ enum Gamemode {
   START_STOP
 };
 
+enum Gamemode gamemode;
+bool resetTriggered;
+bool clientConnected;
+bool running;
+bool resettet;
+float zeit;
+unsigned long timeStart; 
 
 void setup() {
   Serial.begin(115200);
@@ -39,14 +46,13 @@ void setup() {
     pinMode(gameBTNS[i], INPUT_PULLUP);
   }
   
-  enum Gamemode gamemode = NORMAL;
-  bool resetTriggered = false;
-  bool clientConnected = false;
-  bool running = false;
-  bool resettet = true;
-  float zeit = 0.0;
-
-  unsigned long timeStart = 0; 
+  gamemode = NORMAL;
+  resetTriggered = false;
+  clientConnected = false;
+  running = false;
+  resettet = true;
+  zeit = 0.0;
+  timeStart = 0; 
 
   WiFi.softAP(ssid, password);
   WiFi.softAPConfig(local_ip, gateway, subnet);
@@ -190,7 +196,7 @@ void handle_NotFound(){
 String SendHTML() {
   String ptr = "<!DOCTYPE html> <html>\n";
   ptr += "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">";
-  ptr += "<meta http-equiv=\“refresh\“ content=\“1\“>\n";
+  ptr += "<meta http-equiv=\"refresh\" content=\"1\">\n";
   ptr += "<title>Buzzerjeraet Jakob und Till</title>\n";
   ptr += "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}\n";
   ptr += "body{margin-top: 50px;} h1 {color: #444444;margin: 50px auto 30px;} h3 {color: #444444;margin-bottom: 50px;}\n";
