@@ -198,7 +198,9 @@ void handle_NotFound(){
 String SendHTML() {
   String ptr = "<!DOCTYPE html> <html>\n";
   ptr += "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">";
-  ptr += "<meta http-equiv=\"refresh\" content=\"1\">\n";
+  ptr += "<meta http-equiv=\"refresh\" content=\"1\" ; URL=";
+  ptr += local_ip;
+  ptr += ">\n";
   ptr += "<title>Buzzerjeraet Jakob und Till</title>\n";
   ptr += "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}\n";
   ptr += "body{margin-top: 50px;} h1 {color: #444444;margin: 50px auto 30px;} h3 {color: #444444;margin-bottom: 50px;}\n";
