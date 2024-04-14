@@ -28,14 +28,6 @@ enum Gamemode {
   START_STOP
 };
 
-enum Gamemode gamemode = NORMAL;
-bool resetTriggered = false;
-bool clientConnected = false;
-bool running = false;
-bool resettet = true;
-float zeit = 0.0;
-
-unsigned long timeStart = 0; 
 
 void setup() {
   Serial.begin(115200);
@@ -46,6 +38,15 @@ void setup() {
   for (int i; i < 3; i++) {
     pinMode(gameBTNS[i], INPUT_PULLUP);
   }
+  
+  enum Gamemode gamemode = NORMAL;
+  bool resetTriggered = false;
+  bool clientConnected = false;
+  bool running = false;
+  bool resettet = true;
+  float zeit = 0.0;
+
+  unsigned long timeStart = 0; 
 
   WiFi.softAP(ssid, password);
   WiFi.softAPConfig(local_ip, gateway, subnet);
