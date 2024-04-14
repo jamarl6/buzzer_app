@@ -112,14 +112,15 @@ void normal_game() {
       tone(buzzer, 1300, 50);
 
       if (!clientConnected) {
-        Serial.println("Reset!");
-        // Auto resets after 5 seconds
-        delay(resetDelay); 
-        // needs to be manually reset when game show button is depressed
-        //for (;;);
-        Serial.println(gameLEDS[i]);
+        Serial.print("gebuzzert: LEDpin: ");
+        Serial.print(gameLEDS[i]);
+        Serial.print(" Buzzerpin: ");
         Serial.println(gameBTNS[i]);
+
+        delay(resetDelay); 
+        
         reset();
+        Serial.println("Zeit-Reset!");
       }
     }
   }
@@ -127,7 +128,7 @@ void normal_game() {
 
 void start_stop_game() {
   for (int i = 0; i < 3; i++) {
-    //Press the button to intiate which button chimes in
+   
     if (digitalRead(gameBTNS[i]) == LOW) {
       if (!running) {
         timeStart = millis();
@@ -162,6 +163,7 @@ void loop() {
 
   if (resetTriggered) {
     reset();
+    Serial.println("manueller Reset!");
     resetTriggered = false;
   }
 }
