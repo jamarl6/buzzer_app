@@ -131,6 +131,7 @@ void normal_game() {
   if (digitalRead(schalter) == LOW) {
     gamemode = START_STOP;
     Serial.println("gewechselt");
+    delay(500);
   }
 }
 
@@ -160,6 +161,7 @@ void start_stop_game() {
   if (digitalRead(schalter) == LOW) {
     gamemode = NORMAL;
     Serial.println("gewechselt1");
+    delay(500);
   }
 }
 
