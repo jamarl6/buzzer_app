@@ -18,10 +18,13 @@ int gameLEDS[] = { 14,27,26 };
 int gameBTNS[] = { 15,5,4 };
 //PIEZO BUZZER 
 int buzzer = 13;
+//Schalter für Gamemode
+int schalter = 34;
 //ALL DELAYS
 int buzzerDelay = 100;
 int blinkDelay = 500;
-int resetDelay = 6000;
+int resetDelay = 12000;
+int anz = 3;
 
 enum Gamemode {
   NORMAL,
@@ -34,17 +37,18 @@ bool clientConnected;
 bool running;
 bool resettet;
 float zeit;
-unsigned long timeStart; 
+unsigned long timeStart;
 
 void setup() {
   Serial.begin(115200);
-  for (int i; i < 3; i++) {
+  for (int i; i < anz; i++) {
     pinMode(gameLEDS[i], OUTPUT);
   }
   //This loops and sets up the Button pins to be INPUT_PULLUP in an array. Ground is HIGH so signal goes LOW on depress.
-  for (int i; i < 3; i++) {
+  for (int i; i < anz; i++) {
     pinMode(gameBTNS[i], INPUT_PULLUP);
   }
+  pinMode(schalter, INPUT_PULLUP);
   
   gamemode = NORMAL;
   resetTriggered = false;
@@ -52,7 +56,7 @@ void setup() {
   running = false;
   resettet = true;
   zeit = 0.0;
-  timeStart = 0; 
+  timeStart = 0;
 
   WiFi.softAP(ssid, password);
   WiFi.softAPConfig(local_ip, gateway, subnet);
@@ -69,25 +73,25 @@ void setup() {
 }
 
 void all_blink_and_buzz() {
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < anz; i++) {
     digitalWrite(gameLEDS[i], HIGH);
   }
   tone(buzzer, 1300, 50);
   delay(blinkDelay);
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < anz; i++) {
     digitalWrite(gameLEDS[i], LOW);
   }
 }
 
 void reset() {
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < anz; i++) {
     digitalWrite(gameLEDS[i], LOW);
   }
   resettet = true;
 }
 
 void normal_game() {
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < anz; i++) {
     //Press the button to intiate which button chimes in
     if (digitalRead(gameBTNS[i]) == LOW && resettet) {
 
@@ -124,10 +128,13 @@ void normal_game() {
       }
     }
   }
+  if (digitalRead(schalter) == LOW) {
+    gamemode = START_STOP;
+  }
 }
 
 void start_stop_game() {
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < anz; i++) {
    
     if (digitalRead(gameBTNS[i]) == LOW) {
       if (!running) {
@@ -148,6 +155,9 @@ void start_stop_game() {
         zeit = elapsedInSec;
       }     
     }
+  }
+  if (digitalRead(schalter) == LOW) {
+    gamemode = NORMAL;
   }
 }
 
