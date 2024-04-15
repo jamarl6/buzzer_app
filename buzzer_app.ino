@@ -19,11 +19,11 @@ int gameBTNS[] = { 15,5,4 };
 //PIEZO BUZZER 
 int buzzer = 13;
 //Schalter für Gamemode
-int schalter = 34;
+int schalter = 23;
 //ALL DELAYS
 int buzzerDelay = 100;
 int blinkDelay = 500;
-int resetDelay = 12000;
+int resetDelay = 2000;
 int anz = 3;
 
 enum Gamemode {
@@ -130,6 +130,7 @@ void normal_game() {
   }
   if (digitalRead(schalter) == LOW) {
     gamemode = START_STOP;
+    Serial.println("gewechselt");
   }
 }
 
@@ -158,6 +159,7 @@ void start_stop_game() {
   }
   if (digitalRead(schalter) == LOW) {
     gamemode = NORMAL;
+    Serial.println("gewechselt1");
   }
 }
 
