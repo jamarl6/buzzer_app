@@ -123,13 +123,14 @@ void normal_game() {
         Serial.println(gameBTNS[i]);
 
         kp = 1;
-        while (digitalRead(schalter) == HIGH || kp < 20) {
-          delay(500); 
+        while (digitalRead(schalter) == HIGH && kp < 300) {
+          delay(50); 
           kp++;
         }
         
         reset();
         Serial.println("Zeit-Reset!");
+        delay(500);
       }
     }
   }
