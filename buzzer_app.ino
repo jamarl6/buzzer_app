@@ -23,8 +23,9 @@ int schalter = 23;
 //ALL DELAYS
 int buzzerDelay = 100;
 int blinkDelay = 500;
-int resetDelay = 2000;
+int resetDelay = 20000;
 int anz = 3;
+int kp = 0;
 
 enum Gamemode {
   NORMAL,
@@ -121,7 +122,11 @@ void normal_game() {
         Serial.print(" Buzzerpin: ");
         Serial.println(gameBTNS[i]);
 
-        delay(resetDelay); 
+        kp = 1;
+        while (digitalRead(schalter) == HIGH || kp < 20) {
+          delay(500); 
+          kp++;
+        }
         
         reset();
         Serial.println("Zeit-Reset!");
@@ -130,7 +135,7 @@ void normal_game() {
   }
   if (digitalRead(schalter) == LOW) {
     gamemode = START_STOP;
-    Serial.println("gewechselt");
+    Serial.println("gewechselt-timer");
     delay(500);
   }
 }
@@ -160,7 +165,7 @@ void start_stop_game() {
   }
   if (digitalRead(schalter) == LOW) {
     gamemode = NORMAL;
-    Serial.println("gewechselt1");
+    Serial.println("gewechselt-normal");
     delay(500);
   }
 }
