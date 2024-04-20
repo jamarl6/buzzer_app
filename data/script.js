@@ -6,10 +6,6 @@ function getTimer() {
         if (this.readyState == 4 && this.status == 200) {
             var myObj = JSON.parse(this.responseText);
             console.log(myObj);
-            var temp = myObj.temperature;
-            var hum = myObj.humidity;
-            gaugeTemp.value = temp;
-            gaugeHum.value = hum;
         }
     };
     xhr.open("GET", "/readings", true);
@@ -33,11 +29,9 @@ if (!!window.EventSource) {
         console.log("message", e.data);
     }, false);
 
-    source.addEventListener('new_readings', function (e) {
-        console.log("new_readings", e.data);
-        var myObj = JSON.parse(e.data);
-        console.log(myObj);
-        gaugeTemp.value = myObj.temperature;
-        gaugeHum.value = myObj.humidity;
+    source.addEventListener('timer_stopped', function (e) {
+        console.log("timer_stopped", e.data);
+        var time = e.data;
+        document.getElementById('elapsed-time').value = time;
     }, false);
 }

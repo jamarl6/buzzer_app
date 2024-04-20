@@ -1,5 +1,5 @@
 #include <WiFi.h>
-#include <ESPAsyncWebServer.h>
+#include "ESPAsyncWebServer.h"
 #include "SPIFFS.h"
 
 /* Put your SSID & Password */
@@ -11,7 +11,12 @@ IPAddress local_ip(192, 168, 1, 1);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
 
-WebServer server(80);
+// Create AsyncWebServer object on port 80
+AsyncWebServer server(80);
+
+// Create an Event Source on /events
+AsyncEventSource events("/events");
+
 
 //3 LEDS
 int gameLEDS[] = { 14,27,26 };
@@ -38,8 +43,30 @@ bool resetTriggered;
 bool clientConnected;
 bool running;
 bool resettet;
-float zeit;
+float time_stopped;
 unsigned long timeStart;
+
+
+// Initialize SPIFFS
+void initSPIFFS() {
+  if (!SPIFFS.begin()) {
+    Serial.println("An error has occurred while mounting SPIFFS");
+  }
+  Serial.println("SPIFFS mounted successfully");
+}
+
+// Initialize WiFi
+void initWiFi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi ..");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print('.');
+    delay(1000);
+  }
+  Serial.println(WiFi.localIP());
+}
+
 
 void setup() {
   Serial.begin(115200);
@@ -52,23 +79,50 @@ void setup() {
   }
   pinMode(schalter, INPUT_PULLUP);
   
+  initWiFi();
+  initSPIFFS();
+
+  // Web Server Root URL
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(SPIFFS, "/index.html", "text/html");
+  });
+
+  server.on("/change_gamemode", HTTP_POST, [](AsyncWebServerRequest *request){
+    gamemode = NORMAL;
+    request->send(200);
+  });
+
+  server.serveStatic("/", SPIFFS, "/");
+
+  // Request for the latest sensor readings
+  server.on("/readings", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", String(time_stopped));
+  });
+
+  events.onConnect([](AsyncEventSourceClient *client){
+    if(client->lastId()){
+      Serial.printf("Client reconnected! Last message ID that it got is: %u\n", client->lastId());
+    }
+    // send event with message "hello!", id current millis
+    // and set reconnect delay to 1 second
+    client->send("hello!", NULL, millis(), 10000);
+  });
+  server.addHandler(&events);
+
+  // Start server
+  server.begin();
+
   gamemode = NORMAL;
   resetTriggered = false;
   clientConnected = false;
   running = false;
   resettet = true;
-  zeit = 0.0;
+  time_stopped = 0.0;
   timeStart = 0;
 
   WiFi.softAP(ssid, password);
   WiFi.softAPConfig(local_ip, gateway, subnet);
   delay(100);
-
-  server.on("/", handle_OnConnect);
-  server.on("/change_gamemode_normal", handle_change_gamemode_normal);
-  server.on("/change_gamemode_start_stop", handle_change_gamemode_start_stop);
-  server.on("/reset", handle_reset);
-  server.onNotFound(handle_NotFound);
 
   server.begin();
   Serial.println("Server jestachtet");
@@ -161,7 +215,8 @@ void start_stop_game() {
         Serial.print(elapsedInSec);
         Serial.print("s");
         Serial.println();
-        zeit = elapsedInSec;
+        time_stopped = elapsedInSec;
+        events.send(String(time_stopped).c_str(), "timer_stopped", millis());
       }     
     }
   }
@@ -173,7 +228,6 @@ void start_stop_game() {
 }
 
 void loop() {
-  server.handleClient();
   if (gamemode == NORMAL) {
     normal_game();
   }
@@ -187,67 +241,4 @@ void loop() {
     Serial.println("manueller Reset!");
     resetTriggered = false;
   }
-}
-
-void handle_OnConnect() {
-  if (!clientConnected) {
-    clientConnected = true;
-    Serial.println("Tilli connected");
-  }
-  server.send(200, "text/html", SendHTML());
-}
-
-void handle_change_gamemode_normal() {
-  gamemode = NORMAL;
-  server.send(200, "text/html", SendHTML());
-}
-
-void handle_change_gamemode_start_stop() {
-  gamemode = START_STOP;
-  server.send(200, "text/html", SendHTML());
-}
-
-void handle_reset() {
-  resetTriggered = true;
-  server.send(200, "text/html", SendHTML());
-}
-
-void handle_NotFound(){
-  server.send(404, "text/plain", "Not found");
-}
-
-String SendHTML() {
-  String ptr = "<!DOCTYPE html> <html>\n";
-  ptr += "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">";
-  ptr += "<meta http-equiv=\"refresh\" content=\"1\" ; URL=";
-  ptr += local_ip;
-  ptr += ">\n";
-  ptr += "<title>Buzzerjeraet Jakob und Till</title>\n";
-  ptr += "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}\n";
-  ptr += "body{margin-top: 50px;} h1 {color: #444444;margin: 50px auto 30px;} h3 {color: #444444;margin-bottom: 50px;}\n";
-  ptr += ".button {display: block;width: 80px;background-color: #3498db;border: none;color: white;padding: 13px 30px;text-decoration: none;font-size: 25px;margin: 0px auto 35px;cursor: pointer;border-radius: 4px;}\n";
-  ptr += ".button-on {background-color: #3498db;}\n";
-  ptr += ".button-on:active {background-color: #2980b9;}\n";
-  ptr += ".button-off {background-color: #34495e;}\n";
-  ptr += ".button-off:active {background-color: #2c3e50;}\n";
-  ptr += "p {font-size: 14px;color: #888;margin-bottom: 10px;}\n";
-  ptr += "</style>\n";
-  ptr += "</head>\n";
-  ptr += "<body>\n";
-  ptr += "<h1>Buzzer pour la Gang</h1>\n";
-  ptr += "<h3>by Bongobrain und Till dem Boss</h3>\n";
-  ptr += "<h4>Vergangene Zeit: ";
-  ptr += String(zeit);
-  ptr += "s</h4>";
-
-  switch(gamemode) {
-    case NORMAL: ptr += "<p>Gamemode</p><a class=\"button button-change_gamemode_start_stop\" href=\"/change_gamemode_start_stop\">Start/Stop</a>\n"; break;
-    case START_STOP: ptr += "<p>Gamemode</p><a class=\"button button-change_gamemode_normal\" href=\"/change_gamemode_normal\">Normal</a>\n"; break;
-  }
-
-  ptr += "<a class=\"button button-reset\" href=\"/reset\">Reset</a>\n";
-
-  ptr += "</body>\n";
-  ptr += "</html>\n";
-  return ptr;
 }
