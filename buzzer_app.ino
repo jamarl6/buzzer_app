@@ -52,18 +52,16 @@ void initSPIFFS() {
   if (!SPIFFS.begin()) {
     Serial.println("An error has occurred while mounting SPIFFS");
   }
-  Serial.println("SPIFFS mounted successfully");
+  else {
+    Serial.println("SPIFFS mounted successfully");
+  }
 }
 
 // Initialize WiFi
 void initWiFi() {
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  Serial.print("Connecting to WiFi ..");
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print('.');
-    delay(1000);
-  }
+  WiFi.softAP(ssid, password);
+  WiFi.softAPConfig(local_ip, gateway, subnet);
+  Serial.print("Access Point created");
   Serial.println(WiFi.localIP());
 }
 
@@ -111,6 +109,8 @@ void setup() {
 
   // Start server
   server.begin();
+  delay(100);
+  Serial.println("Server jestachtet");
 
   gamemode = NORMAL;
   resetTriggered = false;
@@ -120,12 +120,7 @@ void setup() {
   time_stopped = 0.0;
   timeStart = 0;
 
-  WiFi.softAP(ssid, password);
-  WiFi.softAPConfig(local_ip, gateway, subnet);
-  delay(100);
-
-  server.begin();
-  Serial.println("Server jestachtet");
+  
 }
 
 void all_blink_and_buzz() {
