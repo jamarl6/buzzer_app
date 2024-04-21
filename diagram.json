@@ -74,8 +74,8 @@
     [ "led1:C", "bb1:tp.2", "green", [ "v0" ] ],
     [ "led2:A", "esp:26", "green", [ "h-326", "v-90.8", "h114.4", "v-86.4" ] ],
     [ "led2:C", "bb1:tp.8", "green", [ "v0" ] ],
-    [ "led3:A", "esp:25", "green", [ "v5.2", "h-460.4", "v-220.8" ] ],
-    [ "led3:C", "bb1:tp.14", "green", [ "v0" ] ]
+    [ "led3:C", "bb1:tp.14", "green", [ "v0" ] ],
+    [ "esp:27", "led3:A", "green", [ "h0" ] ]
   ],
   "dependencies": {}
 }

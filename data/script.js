@@ -2,13 +2,19 @@ window.addEventListener('load', getTimer);
 
 function getTimer() {
     var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function () {
-        if (this.readyState == 4 && this.status == 200) {
-            var myObj = JSON.parse(this.responseText);
-            console.log(myObj);
-        }
-    };
     xhr.open("GET", "/readings", true);
+    xhr.send();
+}
+
+function reset() {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "/reset", true);
+    xhr.send();
+}
+
+function change_gamemode_start_stop() {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "/change_gamemode_start_stop", true);
     xhr.send();
 }
 
@@ -32,6 +38,6 @@ if (!!window.EventSource) {
     source.addEventListener('timer_stopped', function (e) {
         console.log("timer_stopped", e.data);
         var time = e.data;
-        document.getElementById('elapsed-time').value = time;
+        document.getElementById('elapsed-time').innerHTML = time + "s";
     }, false);
 }

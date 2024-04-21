@@ -1,10 +1,18 @@
+#include <Arduino.h>
+#ifdef ESP32
 #include <WiFi.h>
+#include <AsyncTCP.h>
+#elif defined(ESP8266)
+#include <ESP8266WiFi.h>
+#include <ESPAsyncTCP.h>
+#endif
 #include <ESPAsyncWebServer.h>
-#include "SPIFFS.h"
+#include <SPIFFS.h>
 
 /* Put your SSID & Password */
-const char* ssid = "BuzzerBongoTill";  // Enter SSID here
-const char* password = "BingoBongo567";  //Enter Password here
+const char* ssid = "Wokwi-GUEST";  // Enter SSID here
+const char* password = "";  //Enter Password here
+const int WIFI_CHANNEL = 6; // Speeds up the connection in Wokwi
 
 /* Put IP Address details */
 IPAddress local_ip(192, 168, 1, 1);
@@ -29,7 +37,7 @@ int schalter = 23;
 //ALL DELAYS
 int buzzerDelay = 100;
 int blinkDelay = 500;
-int resetDelay = 20000;
+int resetDelay = 2000;
 int anz = 3;
 int kp = 0;
 
@@ -51,18 +59,21 @@ unsigned long timeStart;
 void initSPIFFS() {
   if (!SPIFFS.begin()) {
     Serial.println("An error has occurred while mounting SPIFFS");
+    return;
   }
-  else {
-    Serial.println("SPIFFS mounted successfully");
-  }
+  Serial.println("SPIFFS mounted successfully");
 }
 
 // Initialize WiFi
 void initWiFi() {
-  WiFi.softAP(ssid, password);
-  WiFi.softAPConfig(local_ip, gateway, subnet);
-  Serial.print("Access Point created");
-  Serial.println(WiFi.localIP());
+  Serial.print("Connecting to WiFi... ");
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password, WIFI_CHANNEL);
+  if (WiFi.waitForConnectResult() != WL_CONNECTED) {
+      Serial.printf("WiFi Failed!\n");
+      return;
+  }
+  Serial.println(" Connected!");
 }
 
 
@@ -82,15 +93,28 @@ void setup() {
 
   // Web Server Root URL
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(SPIFFS, "/index.html", "text/html");
+    request->send(200, "text/html", createHTML());
+    Serial.println("Client connected!");
+    clientConnected = true;
   });
 
-  server.on("/change_gamemode", HTTP_POST, [](AsyncWebServerRequest *request){
+  server.on("/change_gamemode_normal", HTTP_GET, [](AsyncWebServerRequest *request){
     gamemode = NORMAL;
     request->send(200);
   });
 
-  server.serveStatic("/", SPIFFS, "/");
+  server.on("/change_gamemode_start_stop", HTTP_GET, [](AsyncWebServerRequest *request){
+    gamemode = START_STOP;
+    request->send(200);
+  });
+
+  server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request){
+    resetTriggered = true;
+    request->send(200);
+  });
+
+  //TODO: comment this in if not in emulator mode
+  //server.serveStatic("/", SPIFFS, "/");
 
   // Request for the latest sensor readings
   server.on("/readings", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -105,6 +129,7 @@ void setup() {
     // and set reconnect delay to 1 second
     client->send("hello!", NULL, millis(), 10000);
   });
+
   server.addHandler(&events);
 
   // Start server
@@ -166,18 +191,13 @@ void normal_game() {
       digitalWrite(gameLEDS[i], HIGH);
       tone(buzzer, 1300, 50);
 
-      if (!clientConnected) {
-        Serial.print("gebuzzert: LEDpin: ");
-        Serial.print(gameLEDS[i]);
-        Serial.print(" Buzzerpin: ");
-        Serial.println(gameBTNS[i]);
+      Serial.print("gebuzzert: LEDpin: ");
+      Serial.print(gameLEDS[i]);
+      Serial.print(" Buzzerpin: ");
+      Serial.println(gameBTNS[i]);
 
-        kp = 1;
-        while (digitalRead(schalter) == HIGH && kp < 300) {
-          delay(50); 
-          kp++;
-        }
-        
+      if (!clientConnected) {
+        delay(resetDelay);   
         reset();
         Serial.println("Zeit-Reset!");
         delay(500);
@@ -232,8 +252,143 @@ void loop() {
   }
 
   if (resetTriggered) {
-    reset();
-    Serial.println("manueller Reset!");
+    if (!resettet) {
+      reset();
+      Serial.println("manueller Reset!");
+    }
+    else {
+      Serial.println("Kein Reset möglich");
+    }
     resetTriggered = false;
   }
+}
+
+//This part is needed since Wokwi doesn't support SPIFFS
+String createHTML() {
+  String html = R"(
+    <!DOCTYPE html>
+    <html>
+
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+        <title>Buzzerjeraet Jakob und Till</title>
+        <style>
+          html {
+              font-family: Helvetica;
+              display: inline-block;
+              margin: 0px auto;
+              text-align: center;
+          }
+
+          body {
+              margin-top: 50px;
+          }
+
+          h1 {
+              color: #444444;
+              margin: 50px auto 30px;
+          }
+
+          h3 {
+              color: #444444;
+              margin-bottom: 50px;
+          }
+
+          .button {
+              display: block;
+              width: 80px;
+              background-color: #3498db;
+              border: none;
+              color: white;
+              padding: 13px 30px;
+              text-decoration: none;
+              font-size: 25px;
+              margin: 0px auto 35px;
+              cursor: pointer;
+              border-radius: 4px;
+          }
+
+          .button-on {
+              background-color: #3498db;
+          }
+
+          .button-on:active {
+              background-color: #2980b9;
+          }
+
+          .button-off {
+              background-color: #34495e;
+          }
+
+          .button-off:active {
+              background-color: #2c3e50;
+          }
+
+          p {
+              font-size: 14px;
+              color: #888;
+              margin-bottom: 10px;
+          }
+        </style>
+    </head>
+
+    <body>
+        <div>
+            <h1>Buzzer pour la Gang</h1>
+            <h3>by Bongobrain und Till dem Boss</h3>
+            <h4>Vergangene Zeit:</h4>
+            <p id="elapsed-time">1s</p>
+            <p>Gamemode</p><a class="button" onclick="change_gamemode_start_stop() ">Start/Stop</a>
+            <a class="button" onclick="reset() "> Reset</a>
+        </div>
+        <script>
+          window.addEventListener('load', getTimer);
+
+          function getTimer() {
+              var xhr = new XMLHttpRequest();
+              xhr.open("GET", "/readings", true);
+              xhr.send();
+          }
+
+          function reset() {
+              var xhr = new XMLHttpRequest();
+              xhr.open("GET", "/reset", true);
+              xhr.send();
+          }
+
+          function change_gamemode_start_stop() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "/change_gamemode_start_stop", true);
+            xhr.send();
+          }
+
+          if (!!window.EventSource) {
+              var source = new EventSource('/events');
+
+              source.addEventListener('open', function (e) {
+                  console.log("Events Connected");
+              }, false);
+
+              source.addEventListener('error', function (e) {
+                  if (e.target.readyState != EventSource.OPEN) {
+                      console.log("Events Disconnected");
+                  }
+              }, false);
+
+              source.addEventListener('message', function (e) {
+                  console.log("message", e.data);
+              }, false);
+
+              source.addEventListener('timer_stopped', function (e) {
+                  console.log("timer_stopped", e.data);
+                  var time = e.data;
+                  document.getElementById('elapsed-time').innerHTML = time + "s";
+              }, false);
+          }
+        </script>
+    </body>
+
+    </html>
+  )";
+  return html;
 }
