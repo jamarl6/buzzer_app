@@ -43,7 +43,8 @@ int kp = 0;
 
 enum Gamemode {
   NORMAL,
-  START_STOP
+  START_STOP,
+  QUIZ_MODE
 };
 
 enum Gamemode gamemode;
@@ -98,19 +99,38 @@ void setup() {
     clientConnected = true;
   });
 
-  server.on("/change_gamemode_normal", HTTP_GET, [](AsyncWebServerRequest *request){
-    gamemode = NORMAL;
-    request->send(200);
-  });
+  server.on("/change_gamemode", HTTP_POST, [](AsyncWebServerRequest *request){
+    if (request->hasParam("gamemode", true)) {
+      int gamemode_received = request->getParam("gamemode", true)->value().toInt();
+      Serial.print("Gamemode-Change received: ");
+      Serial.println(gamemode_received);
+      switch (gamemode_received)
+      {
+      case NORMAL:
+        gamemode = NORMAL;
+        break;
 
-  server.on("/change_gamemode_start_stop", HTTP_GET, [](AsyncWebServerRequest *request){
-    gamemode = START_STOP;
-    request->send(200);
+      case START_STOP:
+        gamemode = START_STOP;
+        break;
+
+      case QUIZ_MODE:
+        gamemode = QUIZ_MODE;
+        break;
+
+      default:
+        gamemode = NORMAL;
+      }
+    }
+    else {
+      Serial.println("ERROR: No gamemode parameter provided in request");
+    }
+    request->send(200, "text/html", createHTML());
   });
 
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request){
     resetTriggered = true;
-    request->send(200);
+    request->send(200, "text/html", createHTML());
   });
 
   //TODO: comment this in if not in emulator mode
@@ -201,6 +221,9 @@ void normal_game() {
         reset();
         Serial.println("Zeit-Reset!");
         delay(500);
+      }
+      else {
+        events.send("", "reset_enabled", millis());
       }
     }
   }
@@ -338,8 +361,14 @@ String createHTML() {
             <h3>by Bongobrain und Till dem Boss</h3>
             <h4>Vergangene Zeit:</h4>
             <p id="elapsed-time">1s</p>
-            <p>Gamemode</p><a class="button" onclick="change_gamemode_start_stop() ">Start/Stop</a>
-            <a class="button" onclick="reset() "> Reset</a>
+            <p>Gamemode</p>
+            <select name="gamemode" id="gamemode">
+              <option value="0" NORMAL_ACTIVE>Normal</option>
+              <option value="1" START_STOP_ACTIVE>Start/Stop</option>
+              <option value="2" QUIZ_MODE_ACTIVE>Quiz-Mode</option>
+            </select>
+            <button id="gamemode-button" type="button" onclick="change_gamemode() ">Bestätigen</button>
+            <button id="reset-button" type="button" onclick="reset() " RESET_DISABLED> Reset</button>
         </div>
         <script>
           window.addEventListener('load', getTimer);
@@ -356,10 +385,13 @@ String createHTML() {
               xhr.send();
           }
 
-          function change_gamemode_start_stop() {
+          function change_gamemode() {
+            var params = "gamemode=" + document.getElementById("gamemode").value;
             var xhr = new XMLHttpRequest();
-            xhr.open("GET", "/change_gamemode_start_stop", true);
-            xhr.send();
+            xhr.open("POST", "/change_gamemode", true);
+            xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+
+            xhr.send(params);
           }
 
           if (!!window.EventSource) {
@@ -379,6 +411,11 @@ String createHTML() {
                   console.log("message", e.data);
               }, false);
 
+              source.addEventListener('reset_enabled', function (e) {
+                  console.log("reset_enabled");
+                  document.getElementById('reset-button').disabled = false;
+              }, false); 
+
               source.addEventListener('timer_stopped', function (e) {
                   console.log("timer_stopped", e.data);
                   var time = e.data;
@@ -387,8 +424,31 @@ String createHTML() {
           }
         </script>
     </body>
-
     </html>
   )";
+  switch (gamemode)
+  {
+    case START_STOP:
+      html.replace("START_STOP_ACTIVE", "selected");
+      html.replace("NORMAL_ACTIVE", "");
+      html.replace("QUIZ_MODE_ACTIVE", "");
+      break;
+    case NORMAL:
+      html.replace("NORMAL_ACTIVE", "selected");
+      html.replace("START_STOP_ACTIVE", "");
+      html.replace("QUIZ_MODE_ACTIVE", "");
+      break;
+    case QUIZ_MODE:
+      html.replace("QUIZ_MODE_ACTIVE", "selected");
+      html.replace("START_STOP_ACTIVE", "");
+      html.replace("NORMAL_ACTIVE", "");
+      break;
+  }
+  if (!resettet && !resetTriggered) {
+    html.replace("RESET_DISABLED", "");
+  }
+  else {
+    html.replace("RESET_DISABLED", "disabled");
+  }
   return html;
 }
