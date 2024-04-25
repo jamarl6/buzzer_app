@@ -197,19 +197,19 @@ void normal_game() {
       digitalWrite(gameLEDS[i], HIGH);
 
       //Buzzer and light flicker
-      tone(buzzer, 1300, 50);
-      delay(buzzerDelay);
-      digitalWrite(gameLEDS[i], LOW);
-      tone(buzzer, 1300, 50);
-      delay(buzzerDelay);
-      digitalWrite(gameLEDS[i], HIGH);
-      tone(buzzer, 1300, 50);
-      delay(buzzerDelay);
-      digitalWrite(gameLEDS[i], LOW);
-      tone(buzzer, 1300, 50);
-      delay(buzzerDelay);
-      digitalWrite(gameLEDS[i], HIGH);
-      tone(buzzer, 1300, 50);
+      // tone(buzzer, 1300, 50);
+      // delay(buzzerDelay);
+      // digitalWrite(gameLEDS[i], LOW);
+      // tone(buzzer, 1300, 50);
+      // delay(buzzerDelay);
+      // digitalWrite(gameLEDS[i], HIGH);
+      // tone(buzzer, 1300, 50);
+      // delay(buzzerDelay);
+      // digitalWrite(gameLEDS[i], LOW);
+      // tone(buzzer, 1300, 50);
+      // delay(buzzerDelay);
+      // digitalWrite(gameLEDS[i], HIGH);
+      // tone(buzzer, 1300, 50);
 
       Serial.print("gebuzzert: LEDpin: ");
       Serial.print(gameLEDS[i]);
@@ -380,6 +380,7 @@ String createHTML() {
           }
 
           function reset() {
+              document.getElementById('reset-button').disabled = true;
               var xhr = new XMLHttpRequest();
               xhr.open("GET", "/reset", true);
               xhr.send();
